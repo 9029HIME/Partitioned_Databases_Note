@@ -1,3 +1,10 @@
+# 前提
+
+ShardingSphere可以理解为ShardingJDBC的演进版，除了提供原有ShardingJDBC客户端级别的分库分表功能外，还提供了ShardingProxy这种中间件级别的组件（类似MyCat），接下来回顾一下ShardingJDBC的功能。
+
+# 读写分离
+
+```yaml
 spring:
   application:
     name: demo_a
@@ -44,3 +51,8 @@ spring:
     props:
       # 打印sql
       sql-show: true
+```
+
+执行com.genn.A.ReadWriteSplitTest#readWriteSplit测试用例，发现正常读写分离，且读操作采用轮询负载均衡：
+
+![image-20230507193404013](01-ShardingSphere之ShardingJDBC.assets/01.png)
