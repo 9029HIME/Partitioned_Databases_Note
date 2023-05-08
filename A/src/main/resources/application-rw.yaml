@@ -1,0 +1,18 @@
+spring:
+  shardingsphere:
+    rules:
+      readwrite-splitting:
+        data-sources:
+          my-datasource: # 读写分离数据源的名字，可以包含上面定义的多个数据源
+            type: Static
+            props:
+              # 写数据源
+              write-data-source-name: master
+              # 读数据源
+              read-data-source-names: slave01,slave02
+              # 读数据源的负载均衡算法名称，可以自定义
+            load-balancer-name: aaa_round
+        load-balancers:
+          aaa_round:
+            # 配置aaa_round的负载均衡算法为轮询
+            type: ROUND_ROBIN

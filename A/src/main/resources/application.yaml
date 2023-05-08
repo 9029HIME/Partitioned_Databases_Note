@@ -4,6 +4,9 @@ spring:
   shardingsphere:
     mode:
       type: Memory # 集群元数据使用内存存储
+    props:
+      # 打印sql
+      sql-show: true
     datasource:
       # 这个集群的节点名称（自定义）
       names: master,slave01,slave02
@@ -25,22 +28,6 @@ spring:
         jdbc-url: jdbc:mysql://192.168.120.161:3007/business_a?allowPublicKeyRetrieval=true
         username: root
         password: 123456
-    rules:
-      readwrite-splitting:
-        data-sources:
-          my-datasource: # 读写分离数据源的名字，可以包含上面定义的多个数据源
-            type: Static
-            props:
-              # 写数据源
-              write-data-source-name: master
-              # 读数据源
-              read-data-source-names: slave01,slave02
-              # 读数据源的负载均衡算法名称，可以自定义
-            load-balancer-name: aaa_round
-        load-balancers:
-          aaa_round:
-            # 配置aaa_round的负载均衡算法为轮询
-            type: ROUND_ROBIN
-    props:
-      # 打印sql
-      sql-show: true
+  profiles:
+#    active: rw # 测试读写分离
+    active: row # 测试水平分表

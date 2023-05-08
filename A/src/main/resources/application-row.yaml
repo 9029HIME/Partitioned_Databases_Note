@@ -1,0 +1,18 @@
+spring:
+  shardingsphere:
+    rules:
+      sharding:
+        tables:
+          table_b:
+            # table_b的逻辑表与数据节点的映射关系
+            actual-data-nodes: master.table_b0,master.table_b1
+            table-strategy:
+              standard:
+                sharding-column: id
+                sharding-algorithm-name: id_hash_mod
+        sharding-algorithms:
+          id_hash_mod:
+            type: HASH_MOD
+            props:
+              sharding-count: 2
+
