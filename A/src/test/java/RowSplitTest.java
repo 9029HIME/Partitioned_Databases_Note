@@ -1,5 +1,6 @@
 package com.genn.A;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.genn.A.mapper.TableAMapper;
 import com.genn.A.mapper.TableBMapper;
 import com.genn.A.pojo.TableB;
@@ -20,6 +21,21 @@ public class RowSplitTest extends com.genn.A.BaseTest {
             b.setbStatus(i);
             tableBMapper.insert(b);
         }
+    }
+
+    @Test
+    public void testRSAndRWS(){
+        TableB rSAndRWS = new TableB();
+        rSAndRWS.setId(10L);
+        rSAndRWS.setbStatus(10);
+        rSAndRWS.setbName("10");
+        tableBMapper.insert(rSAndRWS);
+
+        tableBMapper.selectById(10);
+
+        tableBMapper.selectList(new QueryWrapper<TableB>().eq("b_status",10));
+
+        tableBMapper.selectList(new QueryWrapper<TableB>());
     }
 
 }

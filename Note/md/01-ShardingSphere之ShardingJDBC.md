@@ -206,3 +206,104 @@ mysql> select * from table_b1;
 2. 对于广播表的读操作，ShardingSphere只会读取某一个数据节点的数据，采用就近原则。
 
 生产上主要使用公共字典服务的方式管理字典表，不再赘述广播表的配置方式和使用过程，具体看文档：https://shardingsphere.apache.org/document/current/cn/user-manual/shardingsphere-jdbc/yaml-config/
+
+# 读写分离与水平分片混用！！！
+
+将 `数据节点的数据源` 配置成 `读写分离的自定义数据源即可`：
+
+```yaml
+spring:
+  shardingsphere:
+    rules:
+      sharding:
+        tables:
+          table_b:
+            # 数据节点的数据源
+            actual-data-nodes: my-datasource.table_b0,my-datasource.table_b1
+            table-strategy:
+              standard:
+                sharding-column: id
+                sharding-algorithm-name: id_hash_mod
+        sharding-algorithms:
+          id_hash_mod:
+            type: HASH_MOD
+            props:
+              sharding-count: 2
+      readwrite-splitting:
+        data-sources:
+          # 读写分离的自定义数据源
+          my-datasource:
+            type: Static
+            props:
+              write-data-source-name: master
+              read-data-source-names: slave01,slave02
+            load-balancer-name: aaa_round
+        load-balancers:
+          aaa_round:
+            type: ROUND_ROBIN
+```
+
+测试用例：
+
+```java
+    @Test
+    public void testRSAndRWS(){
+        TableB rSAndRWS = new TableB();
+        rSAndRWS.setId(10L);
+        rSAndRWS.setbStatus(10);
+        rSAndRWS.setbName("10");
+        tableBMapper.insert(rSAndRWS);
+
+        tableBMapper.selectById(10);
+
+        tableBMapper.selectList(new QueryWrapper<TableB>());
+    }
+```
+
+日志：
+
+```
+### 写单条
+2023-05-10 13:11:33.597  INFO 680351 --- [           main] ShardingSphere-SQL                       : Logic SQL: INSERT INTO table_b  ( id,
+b_name,
+b_status )  VALUES  ( ?,
+?,
+? )
+2023-05-10 13:11:33.597  INFO 680351 --- [           main] ShardingSphere-SQL                       : SQLStatement: MySQLInsertStatement(setAssignment=Optional.empty, onDuplicateKeyColumns=Optional.empty)
+2023-05-10 13:11:33.598  INFO 680351 --- [           main] ShardingSphere-SQL                       : Actual SQL: master ::: INSERT INTO table_b0  ( id,
+b_name,
+b_status )  VALUES  (?, ?, ?) ::: [10, 10, 10]
+
+
+
+
+
+
+### 查询单条（分片字段）
+2023-05-10 13:11:33.841  INFO 680351 --- [           main] ShardingSphere-SQL                       : Logic SQL: SELECT id,b_name,b_status FROM table_b WHERE id=? 
+2023-05-10 13:11:33.841  INFO 680351 --- [           main] ShardingSphere-SQL                       : SQLStatement: MySQLSelectStatement(table=Optional.empty, limit=Optional.empty, lock=Optional.empty, window=Optional.empty)
+2023-05-10 13:11:33.841  INFO 680351 --- [           main] ShardingSphere-SQL                       : Actual SQL: slave01 ::: SELECT id,b_name,b_status FROM table_b0 WHERE id=?  ::: [10]
+
+
+
+
+
+
+### 查询单条（非分片字段）
+2023-05-10 13:26:57.309  INFO 724595 --- [           main] ShardingSphere-SQL                       : Logic SQL: SELECT  id,b_name,b_status  FROM table_b WHERE (b_status = ?)
+2023-05-10 13:26:57.310  INFO 724595 --- [           main] ShardingSphere-SQL                       : SQLStatement: MySQLSelectStatement(table=Optional.empty, limit=Optional.empty, lock=Optional.empty, window=Optional.empty)
+2023-05-10 13:26:57.310  INFO 724595 --- [           main] ShardingSphere-SQL                       : Actual SQL: slave01 ::: SELECT  id,b_name,b_status  FROM table_b0 WHERE (b_status = ?) ::: [10]
+2023-05-10 13:26:57.310  INFO 724595 --- [           main] ShardingSphere-SQL                       : Actual SQL: slave02 ::: SELECT  id,b_name,b_status  FROM table_b1 WHERE (b_status = ?) ::: [10]
+
+
+
+
+
+
+### 查询多条
+2023-05-10 13:11:33.902  INFO 680351 --- [           main] ShardingSphere-SQL                       : Logic SQL: SELECT  id,b_name,b_status  FROM table_b
+2023-05-10 13:11:33.903  INFO 680351 --- [           main] ShardingSphere-SQL                       : SQLStatement: MySQLSelectStatement(table=Optional.empty, limit=Optional.empty, lock=Optional.empty, window=Optional.empty)
+2023-05-10 13:11:33.903  INFO 680351 --- [           main] ShardingSphere-SQL                       : Actual SQL: slave02 ::: SELECT  id,b_name,b_status  FROM table_b0
+2023-05-10 13:11:33.903  INFO 680351 --- [           main] ShardingSphere-SQL                       : Actual SQL: slave01 ::: SELECT  id,b_name,b_status  FROM table_b1
+```
+

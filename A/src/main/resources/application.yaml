@@ -30,4 +30,5 @@ spring:
         password: 123456
   profiles:
 #    active: rw # 测试读写分离
-    active: row # 测试水平分表
+#    active: row # 测试水平分表
+    active: rowandsplit # 测试读写 + 水平混用
